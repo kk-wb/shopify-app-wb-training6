@@ -1,0 +1,29 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "5778e394418be13683d5e29f2e998a7c"
+name = "training6-app"
+handle = "training6-app"
+application_url = "https://open-df-modify-emergency.trycloudflare.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "dev-kohei.myshopify.com"
+include_config_on_deploy = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "write_products"
+
+[auth]
+redirect_urls = [
+  "https://open-df-modify-emergency.trycloudflare.com/auth/callback",
+  "https://open-df-modify-emergency.trycloudflare.com/auth/shopify/callback",
+  "https://open-df-modify-emergency.trycloudflare.com/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2024-04"
+
+[pos]
+embedded = false
