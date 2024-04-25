@@ -3,7 +3,7 @@
 client_id = "5778e394418be13683d5e29f2e998a7c"
 name = "training6-app"
 handle = "training6-app"
-application_url = "https://open-df-modify-emergency.trycloudflare.com"
+application_url = "https://but-level-blade-mba.trycloudflare.com"
 embedded = true
 
 [build]
@@ -13,13 +13,13 @@ include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products"
+scopes = "read_orders"
 
 [auth]
 redirect_urls = [
-  "https://open-df-modify-emergency.trycloudflare.com/auth/callback",
-  "https://open-df-modify-emergency.trycloudflare.com/auth/shopify/callback",
-  "https://open-df-modify-emergency.trycloudflare.com/api/auth/callback"
+  "https://but-level-blade-mba.trycloudflare.com/auth/callback",
+  "https://but-level-blade-mba.trycloudflare.com/auth/shopify/callback",
+  "https://but-level-blade-mba.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

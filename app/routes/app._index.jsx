@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { json } from "@remix-run/node";
 import { useActionData, useNavigation, useSubmit } from "@remix-run/react";
 import {
@@ -6,6 +6,7 @@ import {
   Layout,
   Text,
   Card,
+  Form, FormLayout, Checkbox, TextField,
   Button,
   BlockStack,
   Box,
@@ -98,6 +99,7 @@ export default function Index() {
     "gid://shopify/Product/",
     "",
   );
+  const [orderId, setOrderId] = useState(null);
 
   useEffect(() => {
     if (productId) {
@@ -105,6 +107,10 @@ export default function Index() {
     }
   }, [productId]);
   const generateProduct = () => submit({}, { replace: true, method: "POST" });
+
+  const handleSubmit = (e) => {
+    alert(`orderId => ${orderId}`);
+  }
 
   return (
     <Page>
@@ -117,7 +123,13 @@ export default function Index() {
         <Layout>
           <Layout.Section>
             <Card>
-              <BlockStack gap="500">
+              <Form onSubmit={handleSubmit}>
+                <FormLayout>
+                  <TextField value={orderId} label="出荷済にする注文ID" onChange={orderId => setOrderId(orderId)} />
+                </FormLayout>
+                <Button submit>実行</Button>
+              </Form>
+              {/* <BlockStack gap="500">
                 <BlockStack gap="200">
                   <Text as="h2" variant="headingMd">
                     Congrats on creating a new Shopify app(updated2) 🎉
@@ -218,7 +230,7 @@ export default function Index() {
                     </Box>
                   </>
                 )}
-              </BlockStack>
+              </BlockStack> */}
             </Card>
           </Layout.Section>
           <Layout.Section variant="oneThird">
