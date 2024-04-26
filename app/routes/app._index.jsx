@@ -42,7 +42,6 @@ export const action = async ({ request }) => {
     return mkResponse('注文番号が指定されていません');
   }
 
-
   const orderResponse = await admin.graphql(
     `#graphql
       query getOrderByID($id: ID!) {
