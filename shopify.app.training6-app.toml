@@ -3,7 +3,7 @@
 client_id = "5778e394418be13683d5e29f2e998a7c"
 name = "training6-app"
 handle = "training6-app"
-application_url = "https://caring-would-suggestion-increases.trycloudflare.com"
+application_url = "https://lou-publications-replied-purse.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_inventory,read_orders,read_products,write_assigned_fulfillment_or
 
 [auth]
 redirect_urls = [
-  "https://caring-would-suggestion-increases.trycloudflare.com/auth/callback",
-  "https://caring-would-suggestion-increases.trycloudflare.com/auth/shopify/callback",
-  "https://caring-would-suggestion-increases.trycloudflare.com/api/auth/callback"
+  "https://lou-publications-replied-purse.trycloudflare.com/auth/callback",
+  "https://lou-publications-replied-purse.trycloudflare.com/auth/shopify/callback",
+  "https://lou-publications-replied-purse.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
