@@ -1,18 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { json } from "@remix-run/node";
 import { useActionData, useNavigation, useSubmit } from "@remix-run/react";
 import {
   Page,
   Layout,
-  Text,
   Card,
-  Form, FormLayout, Checkbox, TextField,
-  Button,
   BlockStack,
-  Box,
-  List,
-  Link,
-  InlineStack,
+  Form, FormLayout, TextField,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 
@@ -22,318 +16,218 @@ export const loader = async ({ request }) => {
   return null;
 };
 
+/**
+ * @typedef {object} FulfillmentResult
+ * @property {boolean} success
+ * @property {string|null} errorMessage
+ */
+
+
 export const action = async ({ request }) => {
+  /**
+   * @param {[string]} errorMessage 
+   */
+  const mkResponse = (errorMessage) => json({
+    result: {
+      success: !errorMessage,
+      errorMessage: errorMessage || null
+    }
+  });
+
   const { admin } = await authenticate.admin(request);
-  const color = ["Red", "Orange", "Yellow", "Green"][
-    Math.floor(Math.random() * 4)
-  ];
-  const response = await admin.graphql(
+
+  const form = await request.formData();
+  const orderId = form.get('orderId');
+  if (!orderId) {
+    return mkResponse('注文番号が指定されていません');
+  }
+
+
+  const orderResponse = await admin.graphql(
     `#graphql
-      mutation populateProduct($input: ProductInput!) {
-        productCreate(input: $input) {
-          product {
-            id
-            title
-            handle
-            status
-            variants(first: 10) {
-              edges {
-                node {
-                  id
-                  price
-                  barcode
-                  createdAt
+      query getOrderByID($id: ID!) {
+        order(id: $id) {
+          id
+          name
+          fulfillmentOrders(first: 10) {
+            edges {
+              node {
+                id
+                status
+                requestStatus
+                supportedActions {
+                  action
+                }
+                destination {
+                  address1
+                  address2
+                  city
+                  countryCode
+                  email
+                  firstName
+                  lastName
+                  phone
+                  province
+                  zip
+                }
+                lineItems(first: 1) {
+                  edges {
+                    node {
+                      id
+                      totalQuantity
+                      remainingQuantity
+                      inventoryItemId
+                    }
+                  }
+                }
+                assignedLocation {
+                  name
+                  location {
+                    address {
+                      address1
+                      address2
+                      city
+                      countryCode
+                      phone
+                      province
+                      zip
+                    }
+                    id
+                  }
+                }
+                merchantRequests(first: 1){
+                  edges {
+                    node {
+                      message
+                    }
+                  }
                 }
               }
             }
           }
         }
       }`,
-    {
-      variables: {
-        input: {
-          title: `${color} Snowboard`,
+      {
+        variables: {
+          id: `gid://shopify/Order/${orderId}`
         },
-      },
-    },
-  );
-  const responseJson = await response.json();
-  const variantId =
-    responseJson.data.productCreate.product.variants.edges[0].node.id;
-  const variantResponse = await admin.graphql(
+      });
+  const orderResponseObj = await orderResponse.json();
+  const edges = orderResponseObj?.data?.order?.fulfillmentOrders?.edges;
+  if (!edges || !edges[0]) {
+    return mkResponse('注文情報の取得に失敗しました');
+  }
+
+  const fulfillmentOrderId = edges[0].node.id;
+
+  const lineItemEdges = edges[0].node.lineItems.edges;
+  if (!lineItemEdges || !lineItemEdges[0]) {
+    return mkResponse('Response schema invalid.');
+  }
+
+  /** @type {OrderLineItem[]} */
+  const lineItems = lineItemEdges.map(li => ({
+    id: li.node.id,
+    quantity: li.node.totalQuantity
+  }));
+
+  const lineItemsByFulfillmentOrderQuery = lineItems.map(li => `
+            {
+              fulfillmentOrderId: $fulfillmentOrderId,
+              fulfillmentOrderLineItems: [
+                {
+                  id: "${li.id}",
+                  quantity: ${li.quantity}
+                }
+              ]
+            }
+  `).join(',')
+  const createFulfillmentResponse = await admin.graphql(
     `#graphql
-      mutation updateVariant($input: ProductVariantInput!) {
-        productVariantUpdate(input: $input) {
-          productVariant {
+      mutation fulfillmentCreateV2($fulfillmentOrderId: ID!) {
+        fulfillmentCreateV2(fulfillment: {
+          notifyCustomer: false,
+          trackingInfo: {
+            company: "my-shipping-company",
+            number: "1562678",
+            url: "https://www.my-shipping-company.com"
+          },
+          lineItemsByFulfillmentOrder: [${lineItemsByFulfillmentOrderQuery}]
+        })
+        {
+          fulfillment {
             id
-            price
-            barcode
-            createdAt
+            status
+            trackingInfo {
+              company
+              number
+              url
+            }
+          }
+          userErrors {
+            field
+            message
           }
         }
       }`,
-    {
-      variables: {
-        input: {
-          id: variantId,
-          price: Math.random() * 100,
+      {
+        variables: {
+          fulfillmentOrderId
         },
-      },
-    },
-  );
-  const variantResponseJson = await variantResponse.json();
+      });
 
-  return json({
-    product: responseJson.data.productCreate.product,
-    variant: variantResponseJson.data.productVariantUpdate.productVariant,
-  });
+  const fulfillmentResponseObj = await createFulfillmentResponse.json();
+
+  /** @type {FulfillmentResult} */
+  const userErrors = fulfillmentResponseObj?.data?.fulfillmentCreateV2?.userErrors;
+  if (!(userErrors instanceof Array)) {
+    return mkResponse('Response schema invalid.');
+  }
+  if (userErrors.length > 0) {
+    return mkResponse(`フルフィルメント操作に失敗しました(${userErrors.map(e => e.message).join(',')})`);
+  }
+
+  return mkResponse();
 };
 
 export default function Index() {
   const nav = useNavigation();
   const actionData = useActionData();
+  /** @type {FulfillmentResult} */
+  const result = actionData?.result;
   const submit = useSubmit();
   const isLoading =
     ["loading", "submitting"].includes(nav.state) && nav.formMethod === "POST";
-  const productId = actionData?.product?.id.replace(
-    "gid://shopify/Product/",
-    "",
-  );
   const [orderId, setOrderId] = useState(null);
 
   useEffect(() => {
-    if (productId) {
-      shopify.toast.show("Product created");
+    if (result) {
+      shopify.toast.show(result.success ? `出荷完了!` : result.errorMessage, {
+        isError: !result.success
+      });
     }
-  }, [productId]);
-  const generateProduct = () => submit({}, { replace: true, method: "POST" });
-
-  const handleSubmit = (e) => {
-    alert(`orderId => ${orderId}`);
-  }
+  }, [result]);
+  const handleSubmit = () => submit({
+    orderId
+  }, { replace: true, method: "POST" });
 
   return (
     <Page>
-      <ui-title-bar title="Remix app template">
-        <button variant="primary" onClick={generateProduct}>
-          Generate a product
+      <ui-title-bar title="研修6「Fulfillment」">
+        <button isLoading={isLoading} variant="primary" onClick={handleSubmit}>
+          出荷する
         </button>
       </ui-title-bar>
       <BlockStack gap="500">
         <Layout>
           <Layout.Section>
             <Card>
-              <Form onSubmit={handleSubmit}>
+              <Form>
                 <FormLayout>
-                  <TextField value={orderId} label="出荷済にする注文ID" onChange={orderId => setOrderId(orderId)} />
+                  <TextField value={orderId} label="注文ID" name="orderId" onChange={orderId => setOrderId(orderId)} />
                 </FormLayout>
-                <Button submit>実行</Button>
               </Form>
-              {/* <BlockStack gap="500">
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    Congrats on creating a new Shopify app(updated2) 🎉
-                  </Text>
-                  <Text variant="bodyMd" as="p">
-                    This embedded app template uses{" "}
-                    <Link
-                      url="https://shopify.dev/docs/apps/tools/app-bridge"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      App Bridge
-                    </Link>{" "}
-                    interface examples like an{" "}
-                    <Link url="/app/additional" removeUnderline>
-                      additional page in the app nav
-                    </Link>
-                    , as well as an{" "}
-                    <Link
-                      url="https://shopify.dev/docs/api/admin-graphql"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      Admin GraphQL
-                    </Link>{" "}
-                    mutation demo, to provide a starting point for app
-                    development.
-                  </Text>
-                </BlockStack>
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingMd">
-                    Get started with products
-                  </Text>
-                  <Text as="p" variant="bodyMd">
-                    Generate a product with GraphQL and get the JSON output for
-                    that product. Learn more about the{" "}
-                    <Link
-                      url="https://shopify.dev/docs/api/admin-graphql/latest/mutations/productCreate"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      productCreate
-                    </Link>{" "}
-                    mutation in our API references.
-                  </Text>
-                </BlockStack>
-                <InlineStack gap="300">
-                  <Button loading={isLoading} onClick={generateProduct}>
-                    Generate a product
-                  </Button>
-                  {actionData?.product && (
-                    <Button
-                      url={`shopify:admin/products/${productId}`}
-                      target="_blank"
-                      variant="plain"
-                    >
-                      View product
-                    </Button>
-                  )}
-                </InlineStack>
-                {actionData?.product && (
-                  <>
-                    <Text as="h3" variant="headingMd">
-                      {" "}
-                      productCreate mutation
-                    </Text>
-                    <Box
-                      padding="400"
-                      background="bg-surface-active"
-                      borderWidth="025"
-                      borderRadius="200"
-                      borderColor="border"
-                      overflowX="scroll"
-                    >
-                      <pre style={{ margin: 0 }}>
-                        <code>
-                          {JSON.stringify(actionData.product, null, 2)}
-                        </code>
-                      </pre>
-                    </Box>
-                    <Text as="h3" variant="headingMd">
-                      {" "}
-                      productVariantUpdate mutation
-                    </Text>
-                    <Box
-                      padding="400"
-                      background="bg-surface-active"
-                      borderWidth="025"
-                      borderRadius="200"
-                      borderColor="border"
-                      overflowX="scroll"
-                    >
-                      <pre style={{ margin: 0 }}>
-                        <code>
-                          {JSON.stringify(actionData.variant, null, 2)}
-                        </code>
-                      </pre>
-                    </Box>
-                  </>
-                )}
-              </BlockStack> */}
             </Card>
-          </Layout.Section>
-          <Layout.Section variant="oneThird">
-            <BlockStack gap="500">
-              <Card>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    App template specs
-                  </Text>
-                  <BlockStack gap="200">
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Framework
-                      </Text>
-                      <Link
-                        url="https://remix.run"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        Remix
-                      </Link>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Database
-                      </Text>
-                      <Link
-                        url="https://www.prisma.io/"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        Prisma
-                      </Link>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Interface
-                      </Text>
-                      <span>
-                        <Link
-                          url="https://polaris.shopify.com"
-                          target="_blank"
-                          removeUnderline
-                        >
-                          Polaris
-                        </Link>
-                        {", "}
-                        <Link
-                          url="https://shopify.dev/docs/apps/tools/app-bridge"
-                          target="_blank"
-                          removeUnderline
-                        >
-                          App Bridge
-                        </Link>
-                      </span>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        API
-                      </Text>
-                      <Link
-                        url="https://shopify.dev/docs/api/admin-graphql"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        GraphQL API
-                      </Link>
-                    </InlineStack>
-                  </BlockStack>
-                </BlockStack>
-              </Card>
-              <Card>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    Next steps
-                  </Text>
-                  <List>
-                    <List.Item>
-                      Build an{" "}
-                      <Link
-                        url="https://shopify.dev/docs/apps/getting-started/build-app-example"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        {" "}
-                        example app
-                      </Link>{" "}
-                      to get started
-                    </List.Item>
-                    <List.Item>
-                      Explore Shopify’s API with{" "}
-                      <Link
-                        url="https://shopify.dev/docs/apps/tools/graphiql-admin-api"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        GraphiQL
-                      </Link>
-                    </List.Item>
-                  </List>
-                </BlockStack>
-              </Card>
-            </BlockStack>
           </Layout.Section>
         </Layout>
       </BlockStack>
