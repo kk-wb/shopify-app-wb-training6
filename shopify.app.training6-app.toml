@@ -3,7 +3,7 @@
 client_id = "5778e394418be13683d5e29f2e998a7c"
 name = "training6-app"
 handle = "training6-app"
-application_url = "https://stranger-left-santa-overnight.trycloudflare.com"
+application_url = "https://caring-would-suggestion-increases.trycloudflare.com"
 embedded = true
 
 [build]
@@ -13,13 +13,13 @@ include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_orders,write_assigned_fulfillment_orders,write_merchant_managed_fulfillment_orders"
+scopes = "read_inventory,read_orders,read_products,write_assigned_fulfillment_orders,write_fulfillments,write_merchant_managed_fulfillment_orders"
 
 [auth]
 redirect_urls = [
-  "https://stranger-left-santa-overnight.trycloudflare.com/auth/callback",
-  "https://stranger-left-santa-overnight.trycloudflare.com/auth/shopify/callback",
-  "https://stranger-left-santa-overnight.trycloudflare.com/api/auth/callback"
+  "https://caring-would-suggestion-increases.trycloudflare.com/auth/callback",
+  "https://caring-would-suggestion-increases.trycloudflare.com/auth/shopify/callback",
+  "https://caring-would-suggestion-increases.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
