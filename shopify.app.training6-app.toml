@@ -3,7 +3,11 @@
 client_id = "5778e394418be13683d5e29f2e998a7c"
 name = "training6-app"
 handle = "training6-app"
+<<<<<<< Updated upstream
 application_url = "https://shopify-app-wb-training6.onrender.com"
+=======
+application_url = "https://subscriber-laundry-ruth-conducted.trycloudflare.com"
+>>>>>>> Stashed changes
 embedded = true
 
 [build]
@@ -17,9 +21,15 @@ scopes = "read_inventory,read_orders,read_products,write_assigned_fulfillment_or
 
 [auth]
 redirect_urls = [
+<<<<<<< Updated upstream
   "https://shopify-app-wb-training6.onrender.com/auth/callback",
   "https://shopify-app-wb-training6.onrender.com/auth/shopify/callback",
   "https://shopify-app-wb-training6.onrender.com/api/auth/callback"
+=======
+  "https://subscriber-laundry-ruth-conducted.trycloudflare.com/auth/callback",
+  "https://subscriber-laundry-ruth-conducted.trycloudflare.com/auth/shopify/callback",
+  "https://subscriber-laundry-ruth-conducted.trycloudflare.com/api/auth/callback"
+>>>>>>> Stashed changes
 ]
 
 [webhooks]

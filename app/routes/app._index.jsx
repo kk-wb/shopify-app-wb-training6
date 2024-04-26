@@ -213,7 +213,7 @@ export default function Index() {
   return (
     <Page>
       <ui-title-bar title="研修6「Fulfillment」">
-        <button isLoading={isLoading} variant="primary" onClick={handleSubmit}>
+        <button variant="primary" onClick={handleSubmit}>
           出荷する
         </button>
       </ui-title-bar>
